@@ -1,0 +1,12 @@
+{
+  "mediaCode": "35292396bc90464a_1766425832633",
+  "createdAt": "2025-12-22T17:50:32.634Z",
+  "number": "69780484710466@lid",
+  "msgId": "false_69780484710466@lid_3AD64A73929D1B98C465",
+  "mimetype": "audio/ogg; codecs=opus",
+  "originalFilename": null,
+  "sha256": "35292396bc90464a0b59477aae977c390cb934d221968f65de3185a4633955cd",
+  "size": 15517,
+  "encryptedFile": "35292396bc90464a_1766425832633.bin",
+  "note": "Arquivo salvo criptografado (AES-256-GCM). Use decrypt_tool.js para remontar."
+}

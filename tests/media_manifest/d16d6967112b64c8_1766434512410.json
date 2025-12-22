@@ -1,0 +1,12 @@
+{
+  "mediaCode": "d16d6967112b64c8_1766434512410",
+  "createdAt": "2025-12-22T20:15:12.421Z",
+  "number": "status@broadcast",
+  "msgId": "false_status@broadcast_ACD0588F723D15CE1F603AFB480FD75E_200888991924427@lid",
+  "mimetype": "video/mp4",
+  "originalFilename": null,
+  "sha256": "d16d6967112b64c83548c1355107194ab61d5d8242002cc8d92828466c4ebaf5",
+  "size": 3208060,
+  "encryptedFile": "d16d6967112b64c8_1766434512410.bin",
+  "note": "Arquivo salvo criptografado (AES-256-GCM). Use decrypt_tool.js para remontar."
+}
