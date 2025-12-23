@@ -85,6 +85,53 @@
           ]
         }
       }
+    },
+    {
+      "name": "Desconectar Número (Delete)",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:3005/numbers/5511999999999",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3005",
+          "path": [
+            "numbers",
+            "5511999999999"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Limpar Todos (Clear)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3005/numbers/clear",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3005",
+          "path": [
+            "numbers",
+            "clear"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}"
+        }
+      }
     }
   ]
 }

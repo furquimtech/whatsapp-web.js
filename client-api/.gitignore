@@ -1,0 +1,47 @@
+####################################
+# Node.js
+####################################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+####################################
+# WhatsApp Web Sessions (CRÍTICO)
+####################################
+client-api/.wwebjs_auth/
+client-api/.wwebjs_cache/
+
+####################################
+# Auditoria / Logs / Mídias (CRÍTICO)
+####################################
+client-api/audit/
+client-api/numbers.json
+
+####################################
+# Arquivos temporários / runtime
+####################################
+*.log
+*.tmp
+*.cache
+
+####################################
+# Variáveis de ambiente / segredos
+####################################
+.env
+.env.*
+
+####################################
+# Sistema Operacional / IDE
+####################################
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+####################################
+# Build / dist (se futuramente houver)
+####################################
+dist/
+build/

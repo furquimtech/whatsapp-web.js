@@ -29,7 +29,8 @@ function upsertNumber(id, patch) {
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     lastQrAt: null,
-    lastQrDataUrl: null
+    lastQrDataUrl: null,
+    lastError: null
   };
 
   const updated = {
@@ -54,10 +55,27 @@ function listNumbers() {
   return Object.values(store.numbers);
 }
 
+function deleteNumber(id) {
+  const store = loadStore();
+  const existed = !!store.numbers[id];
+  if (existed) {
+    delete store.numbers[id];
+    saveStore(store);
+  }
+  return existed;
+}
+
+function clearNumbers() {
+  const store = { numbers: {} };
+  saveStore(store);
+}
+
 module.exports = {
   loadStore,
   saveStore,
   upsertNumber,
   getNumber,
-  listNumbers
+  listNumbers,
+  deleteNumber,
+  clearNumbers
 };
