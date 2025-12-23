@@ -1,0 +1,12 @@
+{
+  "mediaCode": "4a4b6ef7077aa332_1766435431615",
+  "createdAt": "2025-12-22T20:30:31.619Z",
+  "number": "205484321685544@lid",
+  "msgId": "true_205484321685544@lid_3A18BEEFA03272DF83B6",
+  "mimetype": "image/jpeg",
+  "originalFilename": null,
+  "sha256": "4a4b6ef7077aa33237d6e5563627dc6ebae1e18e84b185b46dc0ee51b6f63fe7",
+  "size": 275421,
+  "encryptedFile": "4a4b6ef7077aa332_1766435431615.bin",
+  "note": "Arquivo salvo criptografado (AES-256-GCM). Use decrypt_tool.js para remontar."
+}

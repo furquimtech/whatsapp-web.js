@@ -1,0 +1,90 @@
+{
+  "info": {
+    "name": "WhatsApp Client API - FTech",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Cadastrar Número (QR)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "http://localhost:3005/numbers",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3005",
+          "path": [
+            "numbers"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"id\": \"5511999999999\",\n  \"name\": \"Empresa X - Numero 1\"\n}"
+        }
+      }
+    },
+    {
+      "name": "Status do Número",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3005/numbers/5511999999999/status",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3005",
+          "path": [
+            "numbers",
+            "5511999999999",
+            "status"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Listar Números",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3005/numbers",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3005",
+          "path": [
+            "numbers"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Buscar QR",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "http://localhost:3005/numbers/5511999999999/qr",
+          "protocol": "http",
+          "host": [
+            "localhost"
+          ],
+          "port": "3005",
+          "path": [
+            "numbers",
+            "5511999999999",
+            "qr"
+          ]
+        }
+      }
+    }
+  ]
+}
