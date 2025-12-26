@@ -127,3 +127,47 @@ Thumbs.db
 ####################################
 dist/
 build/
+client-api/.gitignore
+.gitignore
+
+####################################
+# Client (WhatsApp standalone)
+####################################
+
+# Sessões do WhatsApp (CRÍTICO)
+client/.wwebjs_auth/
+client/.wwebjs_cache/
+client/session-*
+
+# Arquivos temporários / runtime do client
+client/*.log
+client/*.tmp
+client/*.cache
+
+# Possíveis dumps / QR / screenshots
+client/*.png
+client/*.jpg
+client/*.jpeg
+client/*.webp
+
+# Arquivos de segredos locais (se existirem)
+client/secrets*.json
+client/*.key
+client/*.secret
+
+####################################
+# Node / sistema
+####################################
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+####################################
+# IDE / SO
+####################################
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+

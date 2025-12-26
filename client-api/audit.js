@@ -1,3 +1,18 @@
+/**
+ * client-api/audit.js
+ *
+ * Auditoria criptografada (AES-256-GCM) para:
+ * - Conversas 1:1 (DM) e Grupos
+ * - Grava 1 arquivo por conversa (convoKey), dentro da pasta do clientId
+ * - Salva mídias criptografadas e manifesto com MEDIA_CODE
+ *
+ * Requer:
+ *   WHATSAPP_AUDIT_KEY_B64 (base64 de 32 bytes)
+ *
+ * Variáveis:
+ *   CAPTURE_GROUPS=true|false  (default true)
+ */
+
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
@@ -12,6 +27,9 @@ for (const dir of [BASE_DIR, LOG_DIR, MEDIA_DIR, MEDIA_MANIFEST_DIR]) {
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 }
 
+const CAPTURE_GROUPS =
+  String(process.env.CAPTURE_GROUPS ?? "true").toLowerCase() === "true";
+
 function nowIso() {
   return new Date().toISOString();
 }
@@ -24,7 +42,7 @@ function safePart(v) {
     .slice(0, 180);
 }
 
-function isGroupChatId(chatId) {
+function isGroup(chatId) {
   return typeof chatId === "string" && chatId.endsWith("@g.us");
 }
 
@@ -34,8 +52,8 @@ function normalizeContactId(chatId) {
 }
 
 function getKey() {
-  const b64 = "Xr9/1yu0vDPb6crDM+AAOfKStMpOLKEN43/O3+H/C4c="; //process.env.WHATSAPP_AUDIT_KEY_B64;
-  
+  //const b64 = process.env.WHATSAPP_AUDIT_KEY_B64;
+  const b64 = "Xr9/1yu0vDPb6crDM+AAOfKStMpOLKEN43/O3+H/C4c=";
   if (!b64) {
     throw new Error(
       "WHATSAPP_AUDIT_KEY_B64 não definido. Defina base64 de 32 bytes."
@@ -67,13 +85,11 @@ function encryptToBase64(plainText) {
 }
 
 function encryptBufferToFile(buffer, outFilePath) {
+  // binário: iv(12) + tag(16) + ciphertext
   const iv = crypto.randomBytes(12);
   const cipher = crypto.createCipheriv("aes-256-gcm", KEY, iv);
-
   const ciphertext = Buffer.concat([cipher.update(buffer), cipher.final()]);
   const tag = cipher.getAuthTag();
-
-  // binário: iv + tag + ciphertext
   fs.writeFileSync(outFilePath, Buffer.concat([iv, tag, ciphertext]));
 }
 
@@ -95,23 +111,31 @@ function ensureDir(p) {
   if (!fs.existsSync(p)) fs.mkdirSync(p, { recursive: true });
 }
 
-function getLogFilePath(clientId, remoteNumber) {
-  // audit/logs_enc/<clientId>/<remoteNumber>.log
+/**
+ * 1 arquivo por conversa:
+ * - DM -> logs_enc/<clientId>/dm_<remoteNumber>.log
+ * - Grupo -> logs_enc/<clientId>/group_<groupIdNormalizado>.log
+ */
+function getLogFilePath(clientId, convoKey) {
   const dir = path.join(LOG_DIR, safePart(clientId));
   ensureDir(dir);
-  return path.join(dir, `${safePart(remoteNumber)}.log`);
+  return path.join(dir, `${safePart(convoKey)}.log`);
 }
 
-async function appendEncryptedLine(clientId, remoteNumber, recordObj) {
+async function appendEncryptedLine(clientId, convoKey, recordObj) {
   const json = JSON.stringify(recordObj);
   const enc = encryptToBase64(json);
-  const line = enc + "\n";
-  const fp = getLogFilePath(clientId, remoteNumber);
-  await fs.promises.appendFile(fp, line, { encoding: "utf8" });
+  const fp = getLogFilePath(clientId, convoKey);
+  await fs.promises.appendFile(fp, enc + "\n", { encoding: "utf8" });
   return fp;
 }
 
-async function saveMediaEncryptedAndManifest(clientId, remoteNumber, media, msgIdSerialized) {
+async function saveMediaEncryptedAndManifest(
+  clientId,
+  convoKey,
+  media,
+  msgIdSerialized
+) {
   const bin = Buffer.from(media.data, "base64");
   const hash = sha256(bin);
   const mediaCode = makeMediaCode(hash);
@@ -131,7 +155,7 @@ async function saveMediaEncryptedAndManifest(clientId, remoteNumber, media, msgI
     mediaCode,
     createdAt: nowIso(),
     clientId,
-    remoteNumber,
+    convoKey,
     msgId: msgIdSerialized || null,
     mimetype: media.mimetype || null,
     ext: extFromMime(media.mimetype),
@@ -155,19 +179,51 @@ async function resolveContactName(client, chatId) {
   }
 }
 
+async function resolveGroupName(client, groupId) {
+  try {
+    const chat = await client.getChatById(groupId);
+    return chat?.name || chat?.formattedTitle || "";
+  } catch {
+    return "";
+  }
+}
+
 /**
  * Pluga auditoria no client do WhatsApp.
  * clientId = id do número conectado (LocalAuth clientId)
  */
 function attachAudit(client, clientId) {
-  // IN
+  console.log(
+    `[audit] attachAudit ativo para clientId=${clientId} (CAPTURE_GROUPS=${CAPTURE_GROUPS})`
+  );
+
+  // IN (recebidas)
   client.on("message", async (msg) => {
     try {
-      if (isGroupChatId(msg.from)) return;
+      const isGrp = isGroup(msg.from);
 
-      const remoteChatId = msg.from;
-      const remoteNumber = normalizeContactId(remoteChatId);
-      const name = await resolveContactName(client, remoteChatId);
+      if (isGrp && !CAPTURE_GROUPS) return;
+
+      const chatId = msg.from; // "@c.us" ou "@g.us"
+      const chatName = isGrp
+        ? await resolveGroupName(client, chatId)
+        : await resolveContactName(client, chatId);
+
+      // conversa (arquivo)
+      const convoKey = isGrp
+        ? `group_${normalizeContactId(chatId)}`
+        : `dm_${normalizeContactId(chatId)}`;
+
+      // Sempre:
+      const peerNumber = normalizeContactId(chatId);
+      const peerName = chatName || null;
+
+      // Em grupo, o autor real vem em msg.author (ex: "55...@c.us")
+      const authorId = isGrp ? msg.author || null : null;
+      const authorNumber = authorId ? normalizeContactId(authorId) : null;
+      const authorName = authorId
+        ? await resolveContactName(client, authorId)
+        : null;
 
       let text = msg.body || "";
       let mediaInfo = null;
@@ -177,7 +233,7 @@ function attachAudit(client, clientId) {
         if (media) {
           const saved = await saveMediaEncryptedAndManifest(
             clientId,
-            remoteNumber,
+            convoKey,
             media,
             msg.id?._serialized
           );
@@ -186,7 +242,9 @@ function attachAudit(client, clientId) {
             ? `${text} [MEDIA_CODE:${saved.mediaCode}]`
             : `[MEDIA_CODE:${saved.mediaCode}]`;
         } else {
-          text = text ? `${text} [MEDIA_CODE:download_failed]` : `[MEDIA_CODE:download_failed]`;
+          text = text
+            ? `${text} [MEDIA_CODE:download_failed]`
+            : `[MEDIA_CODE:download_failed]`;
         }
       }
 
@@ -194,41 +252,67 @@ function attachAudit(client, clientId) {
         ts: nowIso(),
         direction: "IN",
         clientId,
-        remoteNumber,
-        remoteName: name || null,
+        convoKey,
+
+        // ✅ Sempre presentes
+        chatId,
+        chatName: chatName || null,
+        peerNumber,
+        peerName,
+
+        // DM (compatibilidade)
+        remoteNumber: !isGrp ? peerNumber : null,
+        remoteName: !isGrp ? peerName : null,
+
+        // Grupo
+        groupId: isGrp ? chatId : null,
+        groupName: isGrp ? peerName : null,
+        authorId,
+        authorNumber,
+        authorName,
+
         msgId: msg.id?._serialized || null,
         type: msg.type || null,
         text,
         media: mediaInfo,
       };
 
-      await appendEncryptedLine(clientId, remoteNumber, record);
+      await appendEncryptedLine(clientId, convoKey, record);
     } catch (e) {
       console.error(`[audit] IN error (${clientId}):`, e?.message || e);
     }
   });
 
-  // OUT (mensagens enviadas pela sessão)
+  // OUT (enviadas pela sessão)
   client.on("message_create", async (msg) => {
     try {
       if (!msg.fromMe) return;
-      if (isGroupChatId(msg.to)) return;
 
-      const remoteChatId = msg.to;
-      const remoteNumber = normalizeContactId(remoteChatId);
-      const name = await resolveContactName(client, remoteChatId);
+      const isGrp = isGroup(msg.to);
+      if (isGrp && !CAPTURE_GROUPS) return;
+
+      const chatId = msg.to;
+      const chatName = isGrp
+        ? await resolveGroupName(client, chatId)
+        : await resolveContactName(client, chatId);
+
+      const convoKey = isGrp
+        ? `group_${normalizeContactId(chatId)}`
+        : `dm_${normalizeContactId(chatId)}`;
+
+      const peerNumber = normalizeContactId(chatId);
+      const peerName = chatName || null;
 
       let text = msg.body || "";
       let mediaInfo = null;
 
       if (msg.hasMedia) {
-        // nem sempre download outbound funciona, mas tentamos
         try {
           const media = await msg.downloadMedia();
           if (media) {
             const saved = await saveMediaEncryptedAndManifest(
               clientId,
-              remoteNumber,
+              convoKey,
               media,
               msg.id?._serialized
             );
@@ -237,10 +321,14 @@ function attachAudit(client, clientId) {
               ? `${text} [MEDIA_CODE:${saved.mediaCode}]`
               : `[MEDIA_CODE:${saved.mediaCode}]`;
           } else {
-            text = text ? `${text} [MEDIA_CODE:outbound_no_data]` : `[MEDIA_CODE:outbound_no_data]`;
+            text = text
+              ? `${text} [MEDIA_CODE:outbound_no_data]`
+              : `[MEDIA_CODE:outbound_no_data]`;
           }
         } catch {
-          text = text ? `${text} [MEDIA_CODE:outbound_error]` : `[MEDIA_CODE:outbound_error]`;
+          text = text
+            ? `${text} [MEDIA_CODE:outbound_error]`
+            : `[MEDIA_CODE:outbound_error]`;
         }
       }
 
@@ -248,15 +336,29 @@ function attachAudit(client, clientId) {
         ts: nowIso(),
         direction: "OUT",
         clientId,
-        remoteNumber,
-        remoteName: name || null,
+        convoKey,
+
+        // ✅ Sempre presentes
+        chatId,
+        chatName: chatName || null,
+        peerNumber,
+        peerName,
+
+        // DM (compatibilidade)
+        remoteNumber: !isGrp ? peerNumber : null,
+        remoteName: !isGrp ? peerName : null,
+
+        // Grupo
+        groupId: isGrp ? chatId : null,
+        groupName: isGrp ? peerName : null,
+
         msgId: msg.id?._serialized || null,
         type: msg.type || null,
         text,
         media: mediaInfo,
       };
 
-      await appendEncryptedLine(clientId, remoteNumber, record);
+      await appendEncryptedLine(clientId, convoKey, record);
     } catch (e) {
       console.error(`[audit] OUT error (${clientId}):`, e?.message || e);
     }

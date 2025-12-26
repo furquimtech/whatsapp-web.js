@@ -5,6 +5,8 @@ Este projeto fornece uma **API simples em Node.js** para conectar **múltiplos n
 ⚠️ **Aviso**  
 Este projeto utiliza automação via WhatsApp Web (`whatsapp-web.js`), **não oficial**, indicado para **POC, auditoria interna e governança**.
 
+b64 = "Xr9/1yu0vDPb6crDM+AAOfKStMpOLKEN43/O3+H/C4c=";
+
 ---
 
 ## 🚀 Como rodar a API
